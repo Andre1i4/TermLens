@@ -1,0 +1,117 @@
+:root {
+    /* --- CULORI --- */
+    --primary-dark: #0f172a;
+    --primary-blue: #3b82f6;
+    --ai-purple: #7c3aed;
+    --accent-gold: #fbbf24;
+    
+    --bg-color: #f8fafc;       
+    --card-bg: #ffffff;
+    --text-main: #334155;
+    
+    --safe-green: #10b981;
+    --warn-orange: #f59e0b;
+    --danger-red: #ef4444;
+
+    /* --- EFECTE --- */
+    --shadow-soft: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+body {
+    width: 360px; margin: 0; padding: 0; font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-main);
+}
+
+/* ================= HEADER ================= */
+.header { background-color: var(--primary-dark); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; color: white; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand h1 { font-size: 18px; margin: 0; font-weight: 800; letter-spacing: 0.5px; }
+.version-badge { font-size: 10px; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; color: #38bdf8; font-weight: 700; }
+.logo-icon-svg { width: 28px; height: 28px; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+.logo-icon-svg text { fill: var(--text-main); }
+
+/* ================= HERO SECTION ================= */
+.hero-section { background: var(--primary-dark); text-align: center; padding: 30px 20px 50px; color: white; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.5); transition: background-color 0.5s ease; }
+#verdict-title { margin: 0; font-size: 22px; font-weight: 700; }
+#verdict-desc { margin: 5px 0 0; font-size: 13px; opacity: 0.8; }
+
+/* --- SHIELD ANIMATION (FIXED ALIGNMENT) --- */
+.shield-wrapper { width: 80px; height: 80px; margin: 0 auto 15px; position: relative; }
+.shield-inner { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; z-index: 2; border: 2px solid white; transition: all 0.3s ease; }
+#shield-symbol { display: block; line-height: 1; margin-top: -5px; margin-left: 1px; }
+
+/* Inelul Pulse (Ascuns initial) */
+.pulse-ring { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; border: 2px solid white; z-index: 1; }
+.shield-wrapper.scanning .pulse-ring { display: block; animation: pulse 1.5s infinite; }
+
+@keyframes pulse { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(1.5); opacity: 0; } }
+
+/* Status Colors */
+.hero-safe .shield-inner { border-color: var(--safe-green); box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); } 
+.hero-warn .shield-inner { border-color: var(--warn-orange); box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); } 
+.hero-danger .shield-inner { border-color: var(--danger-red); box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); } 
+
+/* ================= CONTROLS (STACKED) ================= */
+.controls-area { padding: 0 25px; margin-top: -35px; position: relative; z-index: 10; }
+.mode-switcher { display: flex; flex-direction: column; gap: 12px; }
+
+.mode-btn {
+    width: 100%; background: white; border: none; padding: 12px 15px; border-radius: 12px;
+    cursor: pointer; box-shadow: var(--shadow-soft); display: flex; flex-direction: row;
+    align-items: center; justify-content: center; gap: 10px; position: relative;
+    transition: all 0.2s ease; border: 2px solid transparent;
+}
+.mode-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+.mode-btn .btn-icon { font-size: 18px; }
+.mode-btn .btn-text { font-size: 14px; font-weight: 700; color: var(--text-main); }
+
+/* 1. QUICK SCAN */
+#btn-quick { background: white; color: var(--text-main); }
+#btn-quick:hover { border-color: var(--primary-blue); }
+#btn-quick.active { border-color: var(--primary-blue); background: #f0f7ff; color: var(--primary-blue); }
+
+/* 2. DEEP SCAN (MIDNIGHT GRADIENT) */
+#btn-deep {
+    background: linear-gradient(135deg, var(--primary-dark) 0%, #7c3aed 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(15, 23, 42, 0.3);
+    padding: 14px 15px;
+}
+#btn-deep .btn-text { color: white; font-size: 15px; }
+#btn-deep .btn-icon { font-size: 22px; }
+#btn-deep:hover {
+    background: linear-gradient(135deg, #1e293b 0%, #8b5cf6 100%);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+    transform: translateY(-2px);
+    border-color: rgba(124, 58, 237, 0.5);
+}
+#btn-deep:active { transform: scale(0.98); }
+#btn-deep.active { border: 2px solid #a78bfa; }
+
+.btn-content-wrapper { display: flex; align-items: center; gap: 10px; }
+.btn-text-group { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.1; }
+.btn-subtext { font-size: 10px; color: rgba(255, 255, 255, 0.7); font-weight: 500; }
+
+/* BADGE PRO */
+.pro-badge {
+    position: absolute; top: 50%; right: 15px; transform: translateY(-50%);
+    background: var(--accent-gold); color: #0f172a;
+    font-size: 10px; font-weight: 900; padding: 3px 8px; border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none;
+}
+
+/* ================= DETAILS CARD ================= */
+.details-card { background: white; margin: 25px 20px 20px; border-radius: 16px; padding: 20px; box-shadow: var(--shadow-soft); border: 1px solid #f1f5f9; transition: opacity 0.5s ease; }
+.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+.card-header h3 { margin: 0; font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 800; letter-spacing: 0.5px; }
+.count-badge { background: var(--primary-dark); color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
+.activity-list { list-style: none; padding: 0; margin: 0; }
+.activity-list li { font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f8fafc; display: flex; gap: 10px; align-items: center; opacity: 0; animation: fadeIn 0.3s forwards; }
+.activity-list li:last-child { border: none; }
+@keyframes fadeIn { to { opacity: 1; } }
+.empty-state { color: #94a3b8; font-style: italic; }
+
+/* ================= FOOTER ================= */
+.footer { text-align: center; padding-bottom: 20px; }
+#report-btn { background: none; border: none; color: #cbd5e1; font-size: 11px; cursor: pointer; text-decoration: underline; transition: color 0.2s; }
+#report-btn:hover { color: var(--primary-blue); }

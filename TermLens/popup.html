@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TermLens</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="header">
+        <div class="brand">
+            <svg class="logo-icon-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="28" height="28">
+                <g stroke="#3b82f6" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="68" y1="68" x2="90" y2="90" />
+                    <circle cx="42" cy="42" r="34" />
+                </g>
+                <circle cx="42" cy="42" r="30" fill="white" stroke="none" />
+                <text x="42" y="54" font-family="'Inter', sans-serif" font-weight="800" font-size="26" fill="#000000" text-anchor="middle">T&C</text>
+            </svg>
+            <h1>TermLens</h1>
+        </div>
+        <div class="version-badge">BETA</div>
+    </div>
+
+    <div class="hero-section" id="hero-bg">
+        <div class="shield-wrapper" id="shield-icon">
+            <div class="shield-inner">
+                <span id="shield-symbol">🔎</span>
+            </div>
+            <div class="pulse-ring" id="pulse-ring"></div>
+        </div>
+        
+        <h2 id="verdict-title">Ready to Scan</h2>
+        <p id="verdict-desc">Select a mode below to analyze this site.</p>
+    </div>
+
+    <div class="controls-area">
+        <div class="mode-switcher">
+            
+            <button class="mode-btn" id="btn-quick">
+                <span class="btn-icon">⚡</span>
+                <span class="btn-text">Quick Scan</span>
+            </button>
+            
+            <button class="mode-btn" id="btn-deep">
+                <div class="pro-badge">PRO</div>
+                <div class="btn-content-wrapper">
+                    <span class="btn-icon">🧠</span>
+                    <div class="btn-text-group">
+                        <span class="btn-text">Deep Scan</span>
+                        <span class="btn-subtext">AI-Powered Engine</span>
+                    </div>
+                </div>
+            </button>
+
+        </div>
+    </div>
+
+    <div class="details-card" id="details-card" style="opacity: 0.5;">
+        <div class="card-header">
+            <h3>Scan Results</h3>
+            <span class="count-badge" id="tracker-count">-</span>
+        </div>
+        <ul id="simple-reasons" class="activity-list">
+            <li class="empty-state">Waiting for user input...</li>
+        </ul>
+    </div>
+
+    <div class="footer">
+        <button id="report-btn">Report False Positive</button>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
