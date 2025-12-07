@@ -175,6 +175,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             });
         return true; // Keep channel open for async response
     }
+    else if (request.action === "quickScanText") {
+        try {
+            const text = extractPageText();
+            const lower = text.toLowerCase();
+
+            const countMatches = (regex) => {
+                const m = lower.match(regex);
+                return m ? m.length : 0;
+            };
+
+            const stats = {
+                totalCharacters: text.length,
+                totalWords: text.split(/\s+/).filter(Boolean).length,
+                keywords: {
+                    privacy: countMatches(/\bprivacy\b/g),
+                    cookies: countMatches(/\bcookies?\b/g),
+                    thirdParty: countMatches(/third[-\s]?party/g),
+                    sellData: countMatches(/sell(ing)? (my|our|your) data|sale of .*data/g),
+                    shareData: countMatches(/share(ing)? (my|our|your) data|sharing .*data/g)
+                }
+            };
+
+            sendResponse({ success: true, stats });
+        } catch (e) {
+            console.error("❌ Quick text scan failed:", e);
+            sendResponse({ success: false, error: e.message });
+        }
+        return true;
+    }
 });
 
 console.log("✅ TermLens content script loaded");

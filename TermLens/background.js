@@ -3,7 +3,7 @@
 // =================================================================
 
 // OpenAI Configuration
-const OPENAI_API_KEY = "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";
+const OPENAI_API_KEY = "YOUR_OPENAI_API_KEY";
 const HARDCODED_PROMPT = `You are a privacy "LIE DETECTOR" analyzing website terms and conditions against their actual behavior.
 
 Your task:
@@ -15,12 +15,39 @@ Your task:
 Respond in a clear, user‑friendly way using short paragraphs and bullet points. Start with a 1–2 sentence summary that a non‑technical person can understand, then give more detail.`;
 
 const TRACKER_MAP = new Map([
+    // --- GOOGLE ---
     ["google-analytics.com", "Analytics"], ["googletagmanager.com", "Analytics"],
     ["googleadservices.com", "Ads"], ["doubleclick.net", "Ads"],
+    ["google.com/ads", "Ads"], ["gstatic.com", "Infrastructure"],
+    ["youtube.com/api", "Social"], ["googlesyndication.com", "Ads"],
+    
+    // --- META / FACEBOOK ---
     ["facebook.net", "Social Tracking"], ["facebook.com/tr", "Pixel"],
-    ["connect.facebook.net", "Social"], ["tiktok.com", "Social"],
-    ["criteo.com", "Retargeting"], ["hotjar.com", "Screen Recording"]
-    // ... (Lista ta completă rămâne aici)
+    ["connect.facebook.net", "Social"], ["atdmt.com", "Ads (Facebook)"],
+    ["instagram.com", "Social"], ["cdninstagram.com", "Social"],
+
+    // --- MICROSOFT ---
+    ["clarity.ms", "Session Recording"], ["bing.com/as", "Ads"],
+    ["linkedin.com/px", "Social Tracking"], ["licdn.com", "Social"],
+
+    // --- SOCIAL ---
+    ["tiktok.com", "Social"], ["byteoversea.com", "TikTok Ads"],
+    ["twitter.com", "Social"], ["t.co", "Social Tracker"], 
+    ["pinterest.com/ct", "Social"], ["snapchat.com", "Social"],
+
+    // --- AD-TECH ---
+    ["criteo.com", "Retargeting"], ["criteo.net", "Retargeting"],
+    ["taboola.com", "Content Spam"], ["outbrain.com", "Content Spam"],
+    ["rubiconproject.com", "Ad Exchange"], ["pubmatic.com", "Ad Exchange"],
+    ["openx.net", "Ad Exchange"], ["appnexus.com", "Ad Exchange"],
+    ["hotjar.com", "Screen Recording"], ["hotjar.io", "Screen Recording"],
+    ["crazyegg.com", "Heatmap"], ["segment.io", "Data Pipeline"],
+    ["mixpanel.com", "Analytics"], ["newrelic.com", "Performance"],
+    
+    // --- LOCAL (RO) ---
+    ["2performant.com", "Affiliate (RO)"], ["profitshare.ro", "Affiliate (RO)"],
+    ["rtbhouse.net", "Retargeting"], ["gemius.pl", "Analytics"],
+    ["tjobs.ro", "Tracking"], ["trafic.ro", "Analytics"]
 ]);
 
 const TRACKING_PATTERN = /pixel_id=|session_id=|uid=|userid=|adv_id=|tracker_id=|\/collect\?|gclid=|fbclid=/i;
@@ -91,7 +118,8 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
         updateBadge(tabId);
         chrome.storage.local.remove([
             "stats_" + tabId,
-            "deep_scan_" + tabId
+            "deep_scan_" + tabId,
+            "quick_scan_" + tabId
         ]);
     }
 });

@@ -12,17 +12,20 @@ document.addEventListener('DOMContentLoaded', function() {
         chrome.storage.local.get([storageKey], function(result) {
             globalData = result[storageKey] || { count: 0, piiLeaks: 0, trackers: [] };
 
-            // 2. Verificăm dacă există deja un rezultat Deep Scan salvat pentru acest tab
             const deepKey = "deep_scan_" + currentTabId;
-            chrome.storage.local.get([deepKey], function(res2) {
-                const savedDeep = res2[deepKey];
-                if (savedDeep && savedDeep.aiResponse) {
-                    // Restaurăm ultimul rezultat AI pentru acest tab
-                    aiAnalysisData = savedDeep.aiResponse;
+            const quickKey = "quick_scan_" + currentTabId;
 
-                    const detailsCard = document.getElementById('details-card');
-                    const btnQuick = document.getElementById('btn-quick');
-                    const btnDeep = document.getElementById('btn-deep');
+            chrome.storage.local.get([deepKey, quickKey], function(res2) {
+                const savedDeep = res2[deepKey];
+                const savedQuick = res2[quickKey];
+
+                const detailsCard = document.getElementById('details-card');
+                const btnQuick = document.getElementById('btn-quick');
+                const btnDeep = document.getElementById('btn-deep');
+
+                // Prefer restoring Deep Scan if it exists
+                if (savedDeep && savedDeep.aiResponse) {
+                    aiAnalysisData = savedDeep.aiResponse;
 
                     if (detailsCard) detailsCard.style.opacity = "1";
                     if (btnQuick && btnDeep) {
@@ -30,8 +33,22 @@ document.addEventListener('DOMContentLoaded', function() {
                         btnDeep.classList.add('active');
                     }
 
-                    // Randăm din nou UI-ul ca și cum Deep Scan tocmai s-ar fi terminat
                     updateHumanUI(globalData, 'deep', aiAnalysisData);
+
+                    // If we also have a Quick Scan saved, append its summary bullets
+                    if (savedQuick && savedQuick.stats) {
+                        appendQuickStatsToList(savedQuick.stats, globalData);
+                    }
+                } else if (savedQuick && savedQuick.stats) {
+                    // Only Quick Scan exists – restore that state
+                    if (detailsCard) detailsCard.style.opacity = "1";
+                    if (btnQuick && btnDeep) {
+                        btnDeep.classList.remove('active');
+                        btnQuick.classList.add('active');
+                    }
+
+                    updateHumanUI(globalData, 'quick');
+                    appendQuickStatsToList(savedQuick.stats, globalData);
                 }
             });
         });
@@ -50,12 +67,16 @@ function setupButtons() {
     }
 
     // --- QUICK SCAN ---
-    btnQuick.addEventListener('click', () => {
+    btnQuick.addEventListener('click', async () => {
         resetButtonStyles();
         btnQuick.classList.add('active');
         
-        startScanEffect('quick', () => {
+        startScanEffect('quick', async () => {
+            const quickStats = await runQuickTextScan();
             updateHumanUI(globalData, 'quick');
+            if (quickStats) {
+                appendQuickStatsToList(quickStats, globalData);
+            }
             detailsCard.style.opacity = "1";
         });
     });
@@ -71,6 +92,10 @@ function setupButtons() {
             aiAnalysisData = aiResult;
             updateHumanUI(globalData, 'deep', aiAnalysisData);
             detailsCard.style.opacity = "1";
+
+            // Stop the shield scanning animation once deep scan is done
+            const shieldWrap = document.getElementById('shield-icon');
+            if (shieldWrap) shieldWrap.classList.remove('scanning');
         });
     });
 }
@@ -122,7 +147,11 @@ function startScanEffect(mode, callback) {
     const delay = mode === 'quick' ? 600 : 1500;
 
     setTimeout(() => {
-        shieldWrap.classList.remove('scanning');
+        if (mode === 'quick') {
+            // For quick scan we fully finish the animation here
+            shieldWrap.classList.remove('scanning');
+        }
+        // For deep scan we keep the scanning class until the async work finishes
         callback();
     }, delay);
 }
@@ -222,17 +251,85 @@ function updateHumanUI(data, mode, aiAnalysis = null) {
 
     // Populate the list
     if (mode === 'deep' && aiAnalysis && fullText) {
-        // 1) Short summary (always visible)
+        // Helper for safe HTML
+        const escapeHtml = (str) =>
+            str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+        // Extract intro + bullet lines from AI details (if any)
+        let introLines = [];
+        let bulletLines = [];
+        if (detailsText && detailsText.trim().length > 0) {
+            const lines = detailsText.split("\n").map((l) => l.trim()).filter(Boolean);
+            lines.forEach((line) => {
+                if (/^[-•]/.test(line)) {
+                    bulletLines.push(line.replace(/^[-•]\s*/, ""));
+                } else if (!/^key concerns[:：]/i.test(line)) {
+                    introLines.push(line);
+                }
+            });
+        }
+
+        // 1) Short AI summary (always visible)
         const summaryItem = document.createElement("li");
-        summaryItem.style.marginBottom = "6px";
+        summaryItem.style.marginBottom = "8px";
         summaryItem.style.lineHeight = "1.5";
 
-        const safeSummary = summaryText || "No summary available.";
-        summaryItem.innerHTML = `<b>🧠 Lie Detector:</b> ${safeSummary}`;
+        const baseSummary = summaryText || "No summary available.";
+
+        // Derive a very short, user-friendly display summary
+        let displaySummary = baseSummary;
+        if (displaySummary.length > 220) {
+            const sentenceMatch = displaySummary.match(/^(.{0,220}[\.!\?])[\s\S]*/);
+            if (sentenceMatch) {
+                displaySummary = sentenceMatch[1].trim();
+            } else {
+                displaySummary = displaySummary.slice(0, 220).trim() + "…";
+            }
+        }
+
+        // Build top-level bullet points: use AI "Key concerns" bullets if we have them,
+        // otherwise fall back to a single bullet from the summary sentence.
+        const keyBullets = [];
+        if (bulletLines.length) {
+            bulletLines.slice(0, 3).forEach((b) => keyBullets.push(b));
+        }
+        if (!keyBullets.length) {
+            keyBullets.push(displaySummary);
+        }
+        const bulletsHtml = keyBullets
+            .map((b) => {
+                const safe = escapeHtml(b).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+                return `<li>${safe}</li>`;
+            })
+            .join("");
+
+        // Verdict badge styling (AI brain + label)
+        const verdictLabel = (verdict || "").toUpperCase();
+        const verdictColor =
+            verdictLabel === "TRUSTWORTHY"
+                ? "#16a34a" // green when everything is OK
+                : "#dc2626"; // red when there is any risk / not clearly trustworthy
+
+        const verdictText =
+            verdictLabel && verdictLabel !== "UNKNOWN"
+                ? verdictLabel
+                : "LIE DETECTOR RESULT";
+
+        summaryItem.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <span style="font-size:11px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; color:${verdictColor}; display:flex; align-items:center; gap:4px;">
+              <span>🧠</span>
+              <span>${verdictText}</span>
+            </span>
+            <ul style="margin:0; padding-left:18px;">
+              ${bulletsHtml}
+            </ul>
+          </div>
+        `;
         list.appendChild(summaryItem);
 
-        // 2) Optional expandable details
-        if (detailsText && detailsText.trim().length > 0 && detailsText.trim() !== safeSummary.trim()) {
+        // 2) Optional expandable details (show full explanation on demand)
+        if (detailsText && detailsText.trim().length > 0 && detailsText.trim() !== baseSummary.trim()) {
             const detailsItem = document.createElement("li");
             detailsItem.style.marginBottom = "4px";
 
@@ -251,13 +348,27 @@ function updateHumanUI(data, mode, aiAnalysis = null) {
             detailsBox.style.display = "none";
             detailsBox.style.marginTop = "6px";
             detailsBox.style.lineHeight = "1.6";
-            detailsBox.style.whiteSpace = "pre-line";
 
-            let formattedDetails = detailsText
-                .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
-                .replace(/^• /gm, "• ");
+            // Build user-friendly bullet points for the expanded view
+            let htmlParts = [];
 
-            detailsBox.innerHTML = formattedDetails;
+            if (introLines.length) {
+                const intro = escapeHtml(introLines.join(" "))
+                    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+                htmlParts.push(`<div style="margin-bottom:6px;">${intro}</div>`);
+            }
+
+            if (bulletLines.length) {
+                const bulletsHtml = bulletLines
+                    .map((b) => {
+                        const safe = escapeHtml(b).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+                        return `<li>${safe}</li>`;
+                    })
+                    .join("");
+                htmlParts.push(`<ul style="padding-left:18px; margin:0;">${bulletsHtml}</ul>`);
+            }
+
+            detailsBox.innerHTML = htmlParts.join("");
 
             let expanded = false;
             toggleBtn.addEventListener("click", () => {
@@ -291,14 +402,165 @@ function updateHumanUI(data, mode, aiAnalysis = null) {
     });
 
     if (messages.size > 0) {
+        // Section header for technical signals
+        const headerItem = document.createElement("li");
+        headerItem.style.marginTop = "4px";
+        headerItem.style.marginBottom = "2px";
+        headerItem.style.fontSize = "11px";
+        headerItem.style.fontWeight = "600";
+        headerItem.style.color = "#6b7280";
+        headerItem.innerHTML = "Technical signals detected:";
+        list.appendChild(headerItem);
+
         messages.forEach(msg => {
             const li = document.createElement("li");
-            li.innerHTML = msg; 
+            li.style.display = "flex";
+            li.style.alignItems = "center";
+            li.style.gap = "6px";
+
+            // Extract leading emoji (if present) so it aligns nicely
+            const emojiMatch = msg.match(/^(\p{Emoji_Presentation}|\p{Extended_Pictographic})\s*(.*)$/u);
+            if (emojiMatch) {
+                const emojiSpan = document.createElement("span");
+                emojiSpan.textContent = emojiMatch[1];
+                const textSpan = document.createElement("span");
+                textSpan.innerHTML = emojiMatch[2];
+                li.appendChild(emojiSpan);
+                li.appendChild(textSpan);
+            } else {
+                li.innerHTML = msg;
+            }
+
             list.appendChild(li);
         });
     } else {
         if(list.innerHTML === "") {
              list.innerHTML = "<li class='empty-state'>✅ Connection is private.</li>";
         }
+    }
+}
+
+// --- QUICK SCAN TEXT ANALYSIS ---
+
+async function runQuickTextScan() {
+    return new Promise((resolve) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (!tabs || tabs.length === 0) {
+                resolve(null);
+                return;
+            }
+            const tabId = tabs[0].id;
+
+            const sendRequest = () => {
+                chrome.tabs.sendMessage(tabId, { action: "quickScanText" }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        console.error("❌ QuickScan message error:", chrome.runtime.lastError);
+                        resolve(null);
+                    } else if (response && response.success) {
+                        const stats = response.stats;
+                        // Persist Quick Scan result for this tab
+                        const quickKey = "quick_scan_" + tabId;
+                        chrome.storage.local.set({
+                            [quickKey]: {
+                                stats,
+                                createdAt: Date.now()
+                            }
+                        });
+                        resolve(stats);
+                    } else {
+                        console.error("❌ QuickScan failed:", response && response.error);
+                        resolve(null);
+                    }
+                });
+            };
+
+            // Try once; if no content script, inject and retry
+            chrome.tabs.sendMessage(tabId, { action: "quickScanText" }, async (response) => {
+                if (chrome.runtime.lastError && chrome.runtime.lastError.message.includes("Could not establish connection")) {
+                    console.warn("⚠️ No content script in tab for Quick Scan. Injecting content.js and retrying...");
+                    try {
+                        await chrome.scripting.executeScript({
+                            target: { tabId },
+                            files: ["content.js"]
+                        });
+                        sendRequest();
+                    } catch (e) {
+                        console.error("❌ Failed to inject content.js for Quick Scan:", e);
+                        resolve(null);
+                    }
+                } else if (chrome.runtime.lastError) {
+                    console.error("❌ QuickScan initial message error:", chrome.runtime.lastError);
+                    resolve(null);
+                } else if (response && response.success) {
+                    const stats = response.stats;
+                    const quickKey = "quick_scan_" + tabId;
+                    chrome.storage.local.set({
+                        [quickKey]: {
+                            stats,
+                            createdAt: Date.now()
+                        }
+                    });
+                    resolve(stats);
+                } else {
+                    console.error("❌ QuickScan failed:", response && response.error);
+                    resolve(null);
+                }
+            });
+        });
+    });
+}
+
+function appendQuickStatsToList(stats, data) {
+    try {
+        const list = document.getElementById("simple-reasons");
+        if (!list || !stats) return;
+
+        const { keywords } = stats;
+        const totalTrackers = data && typeof data.count === "number" ? data.count : 0;
+
+        const points = [];
+
+        const privacyHits =
+            (keywords.privacy || 0) +
+            (keywords.cookies || 0) +
+            (keywords.thirdParty || 0) +
+            (keywords.sellData || 0) +
+            (keywords.shareData || 0);
+
+        if (privacyHits === 0) {
+            points.push("The text does not clearly talk about privacy or how your data is used.");
+        } else if (privacyHits <= 3) {
+            points.push("Privacy and data use are mentioned a few times in the text.");
+        } else {
+            points.push("Privacy and data use are a frequent topic in the text.");
+        }
+
+        if (totalTrackers === 0) {
+            points.push("No tracking requests were detected while loading this page.");
+        } else if (totalTrackers <= 5) {
+            points.push("A few tracking requests were detected (analytics/ads).");
+        } else {
+            points.push("Many tracking requests were detected from analytics and advertising services.");
+        }
+
+        // Render Quick Scan section as simple bullet list
+        if (points.length > 0) {
+            const headerItem = document.createElement("li");
+            headerItem.style.marginTop = "6px";
+            headerItem.style.marginBottom = "2px";
+            headerItem.style.fontSize = "11px";
+            headerItem.style.fontWeight = "600";
+            headerItem.style.color = "#6b7280";
+            headerItem.innerHTML = "Quick scan summary:";
+            list.appendChild(headerItem);
+
+            points.forEach((p) => {
+                const li = document.createElement("li");
+                li.textContent = p;
+                list.appendChild(li);
+            });
+        }
+    } catch (e) {
+        console.error("❌ Failed to append quick stats:", e);
     }
 }
