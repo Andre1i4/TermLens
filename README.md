@@ -1,6 +1,6 @@
 # TermLens - Privacy Auditor Chrome Extension
 
-**Repository Maintainers:** TermLens Team
+**Repository Maintainers:** Andre1i4
 
 **Event:** PoliHack 2025
 
